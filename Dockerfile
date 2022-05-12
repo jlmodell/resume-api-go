@@ -15,9 +15,6 @@ FROM alpine:latest
 
 WORKDIR /app
 
-RUN mkdir ./static
-COPY ./static ./static
-
 COPY --from=build /go/src/resume-api-go/app .
 
 EXPOSE 8001
