@@ -2,10 +2,16 @@ GET http://localhost:8001/ HTTP/1.1
 ###
 GET http://localhost:8001/api/resume HTTP/1.1
 ###
-PUT http://localhost:8001/api/resume/skills HTTP/1.1
+PUT http://localhost:8001/api/resume/certifications HTTP/1.1
 Content-Type: application/json
 
 {
-    "skill": "edi"
+    "add": "Troubleshooting"
 }
 ###
+DELETE http://localhost:8001/api/resume/certifications HTTP/1.1
+Content-Type: application/json
+
+{
+    "remove": "SECURITY+"
+}

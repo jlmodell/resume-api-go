@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -58,6 +59,13 @@ type Resume struct {
 	Links          []string           `bson:"links" json:"links"`
 }
 
+type FieldList struct {
+	Skills         []string `json:"skills,omitempty" bson:"skills,omitempty"`
+	Certifications []string `json:"certifications,omitempty" bson:"certifications,omitempty"`
+	Projects       []string `json:"projects,omitempty" bson:"projects,omitempty"`
+	Links          []string `json:"links,omitempty" bson:"links,omitempty"`
+}
+
 func getResumeById(id string) (Resume, error) {
 	var err error
 
@@ -84,8 +92,10 @@ func getResumeById(id string) (Resume, error) {
 	return resume, nil
 }
 
-func putSkillOnResume(id string, skill string) error {
+func putAdditionalItemInFieldSlice(id string, add string, field string) ([]string, error) {
 	var err error
+	var fieldList FieldList
+	var fieldValue []string
 
 	ctx := context.Background()
 
@@ -94,28 +104,102 @@ func putSkillOnResume(id string, skill string) error {
 
 	objId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return err
+		return fieldValue, err
 	}
 
-	skill = strings.ToLower(skill)
+	add = strings.ToLower(add)
 
 	filter := bson.M{
 		"_id": objId,
-		"skills": bson.M{
+		field: bson.M{
 			"$not": bson.M{
-				"$regex": skill, "$options": "i",
+				"$regex": add, "$options": "i",
 			},
 		},
 	}
 
-	_, err = coll.UpdateOne(ctx, filter, bson.M{"$addToSet": bson.M{"skills": skill}})
-	if err == mongo.ErrNoDocuments {
-		log.Printf("No document was found with the id %s\n", id)
-		return err
-	}
-	if err != nil {
-		return err
+	update := bson.M{"$addToSet": bson.M{field: add}}
+
+	after := options.After
+	projection := bson.M{"_id": 0, field: 1}
+	opts := options.FindOneAndUpdateOptions{
+		ReturnDocument: &after,
+		Projection:     &projection,
 	}
 
-	return nil
+	err = coll.FindOneAndUpdate(ctx, filter, update, &opts).Decode(&fieldList)
+
+	if err == mongo.ErrNoDocuments {
+		return fieldValue, fmt.Errorf("no document was found with the id (%s) without '%s' in '%s'", id, add, field)
+	}
+	if err != nil {
+		return fieldValue, err
+	}
+
+	if len(fieldList.Certifications) > 0 {
+		fieldValue = fieldList.Certifications
+	} else if len(fieldList.Skills) > 0 {
+		fieldValue = fieldList.Skills
+	} else if len(fieldList.Projects) > 0 {
+		fieldValue = fieldList.Projects
+	} else if len(fieldList.Links) > 0 {
+		fieldValue = fieldList.Links
+	}
+
+	return fieldValue, nil
+}
+
+func delItemInFieldSlice(id string, item string, field string) ([]string, error) {
+	var err error
+	var fieldList FieldList
+	var fieldValue []string
+
+	ctx := context.Background()
+
+	db = client.Database(DB, nil)
+	coll = db.Collection(COLL, nil)
+
+	objId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return fieldValue, err
+	}
+
+	item = strings.ToLower(item)
+
+	filter := bson.M{
+		"_id": objId,
+		field: bson.M{
+			"$in": []string{item},
+		},
+	}
+
+	update := bson.M{"$pull": bson.M{field: item}}
+
+	after := options.After
+	projection := bson.M{"_id": 0, field: 1}
+	opts := options.FindOneAndUpdateOptions{
+		ReturnDocument: &after,
+		Projection:     &projection,
+	}
+
+	err = coll.FindOneAndUpdate(ctx, filter, update, &opts).Decode(&fieldList)
+
+	if err == mongo.ErrNoDocuments {
+		return fieldValue, fmt.Errorf("no document was found with the id (%s) with '%s' in %s", id, item, field)
+	}
+	if err != nil {
+		return fieldValue, err
+	}
+
+	if len(fieldList.Certifications) > 0 {
+		fieldValue = fieldList.Certifications
+	} else if len(fieldList.Skills) > 0 {
+		fieldValue = fieldList.Skills
+	} else if len(fieldList.Projects) > 0 {
+		fieldValue = fieldList.Projects
+	} else if len(fieldList.Links) > 0 {
+		fieldValue = fieldList.Links
+	}
+
+	return fieldValue, nil
 }

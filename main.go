@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 const (
@@ -27,6 +28,11 @@ func main() {
 
 	app := fiber.New()
 
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "http://localhost, https://odellmay.com",
+		AllowHeaders: "Origin, Content-Type, Accept",
+	}))
+
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.JSON(apiDetails)
 	})
@@ -40,29 +46,79 @@ func main() {
 		return c.JSON(resume)
 	})
 
-	app.Put("/api/resume/skills", func(c *fiber.Ctx) error {
+	app.Put("/api/resume/:field", func(c *fiber.Ctx) error {
+		field := c.Params("field")
+		fields := []string{
+			"skills", "projects", "links", "certifications",
+		}
+		if !stringSliceContainsString(fields, field) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":  "invalid field",
+				"fields": fields,
+			})
+		}
 
 		var body struct {
-			Skill string `json:"skill" form:"skill" xml:"skill"`
+			Add string `json:"add" form:"add" xml:"add"`
 		}
 		if err := c.BodyParser(&body); err != nil {
 			return err
 		}
 
-		if body.Skill == "" {
+		if body.Add == "" {
 			return c.Status(400).JSON(fiber.Map{
-				"error": "skill is required",
+				"error": "'add' field is required",
 			})
 		}
 
-		if err := putSkillOnResume(ID, body.Skill); err != nil {
+		fieldValue, err := putAdditionalItemInFieldSlice(ID, body.Add, field)
+		if err != nil {
 			return c.Status(500).JSON(fiber.Map{
 				"error": err.Error(),
 			})
 		}
 
 		return c.Status(200).JSON(fiber.Map{
-			"message": fmt.Sprintf("'%s' was added to skills", body.Skill),
+			"message": fmt.Sprintf("'%s' was added to %s", body.Add, field),
+			field:     fieldValue,
+		})
+	})
+
+	app.Delete("/api/resume/:field", func(c *fiber.Ctx) error {
+		field := c.Params("field")
+		fields := []string{
+			"skills", "projects", "links", "certifications",
+		}
+		if !stringSliceContainsString(fields, field) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":  "invalid field",
+				"fields": fields,
+			})
+		}
+
+		var body struct {
+			Remove string `json:"remove" form:"remove" xml:"remove"`
+		}
+		if err := c.BodyParser(&body); err != nil {
+			return err
+		}
+
+		if body.Remove == "" {
+			return c.Status(400).JSON(fiber.Map{
+				"error": "'remove' field is required",
+			})
+		}
+
+		fieldValue, err := delItemInFieldSlice(ID, body.Remove, field)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		return c.Status(200).JSON(fiber.Map{
+			"message": fmt.Sprintf("'%s' was removed from %s", body.Remove, field),
+			field:     fieldValue,
 		})
 	})
 
