@@ -1,0 +1,21 @@
+use("personal")
+// db.resume.find().forEach(function(doc) {
+//   db.archive.insertOne(doc)
+// })
+
+let skill = "typescript"
+skill = skill.substring(0,1).toUpperCase() + skill.substring(1)
+
+// db.archive.updateOne(
+//     { 
+//         _id: ObjectId("627b1d0ac160c4b9d29a6b30"), 
+//         skills: { $not: { $regex: skill, $options: "i" } } 
+//     }, 
+//     { $addToSet: { skills: skill } }
+// )
+
+const doc = db.resume.findOne({ _id: ObjectId("627b1d0ac160c4b9d29a6b30") })
+
+const lowerCaseSkills = doc.skills.map(skill => skill.toLowerCase())
+
+db.resume.updateOne({ _id: ObjectId("627b1d0ac160c4b9d29a6b30") }, { $set: { skills: lowerCaseSkills } })
