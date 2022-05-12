@@ -23,7 +23,7 @@ func main() {
 		AppName: "resume-api-go",
 		Stack:   "Go, Fiber (v2), MongoDB",
 		Version: "1.0.0",
-		URL:     "https://github.com/jlmodell/resume-api-express",
+		URL:     "https://github.com/jlmodell/resume-api-go",
 	}
 
 	app := fiber.New()
