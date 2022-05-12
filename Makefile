@@ -2,36 +2,34 @@ project_name = resume-api-go
 image_name = resume-api-go:latest
 
 run-local:
-	go run .
+        go run .
 
 requirements:
-	go mod tidy
+        go mod tidy
 
 clean-packages:
-	go clean -modcache
-
-up: 
-	make up-silent
-	make shell
+        go clean -modcache
 
 build:
-	docker build -t $(image_name) .
+        docker-compose up -d --build
 
-build-no-cache:
-	docker build --no-cache -t $(image_name) .
-
-up-silent:
-	make delete-container-if-exist
-	docker run -d -p 8001:8001 --name $(project_name) $(image_name)
-
-delete-container-if-exist:
-	docker stop $(project_name) || true && docker rm $(project_name) || true
+rebuild:
+        git pull
+        make stop
+        make remove
+        make build
 
 shell:
-	docker exec -it $(project_name) /bin/sh
+        docker exec -it $(project_name) bash
 
 stop:
-	docker stop $(project_name)
+        docker stop $(project_name)
+
+remove:
+        docker rm $(project_name)
 
 start:
-	docker start $(project_name)
+        docker start $(project_name)
+
+logs:
+        docker logs $(project_name)
